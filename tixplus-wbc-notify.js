@@ -1,11 +1,12 @@
-"use strict"
+const path = require("path")
+require("dotenv").config({ path: path.resolve(__dirname, ".env") })
 const axios = require("axios")
 const cheerio = require("cheerio")
 const cron = require("node-cron")
 
 const CONFIG = {
-  CHANNEL_ACCESS_TOKEN: "_CHANNEL_ACCESS_TOKEN_", // LINE Messaging API 的 Channel Access Token
-  USER_ID: "_USER_ID_", // 你的 LINE User ID (U開頭)
+  CHANNEL_ACCESS_TOKEN: process.env.CHANNEL_ACCESS_TOKEN, // LINE Messaging API 的 Channel Access Token
+  USER_ID: process.env.USER_ID, // 你的 LINE User ID (U開頭)
   TARGET_URL: "https://tradead.tixplus.jp/wbc2026", // tixplus 售票網址
   CHECK_INTERVAL: "*/5 * * * *", // cron 格式，每 5 分鐘檢查一次（可自行調整）
   NUMBER_OF_REMINDERS: 1, // 刊登數量提醒，預設 1，意即只要有刊登就會提醒
@@ -15,6 +16,11 @@ const CONFIG = {
 async function checkTicketsAndNotify() {
   try {
     console.log("正在檢查票務資訊...")
+
+    if (!CONFIG.CHANNEL_ACCESS_TOKEN || !CONFIG.USER_ID) {
+      console.error("錯誤: 未設定 CHANNEL_ACCESS_TOKEN 或 USER_ID。請檢查 .env 檔案或環境變數。")
+      return
+    }
 
     // 1. 抓取網頁內容
     const response = await axios.get(CONFIG.TARGET_URL, {
@@ -66,9 +72,13 @@ async function checkTicketsAndNotify() {
     console.log(messageText)
 
     // 6. 發送訊息
-    sendLineMessage(messageText)
+    await sendLineMessage(messageText)
   } catch (error) {
     console.error("發生錯誤:", error.message)
+    // In CI/Action environment, failure should exit with error code
+    if (process.env.CI || process.env.GITHUB_ACTIONS) {
+      process.exit(1)
+    }
   }
 }
 
@@ -84,7 +94,12 @@ function extractTicketInfo(jsonData) {
   const items = jsonData?.props?.concerts || []
 
   items.forEach((item) => {
-    if (item.listings_count >= CONFIG.NUMBER_OF_REMINDERS) {
+    // Check if listing count meets threshold AND name contains target team
+    if (
+      item.listings_count >= CONFIG.NUMBER_OF_REMINDERS &&
+      item.name &&
+      item.name.includes("チャイニーズ・タイペイ")
+    ) {
       results.push({
         name: item.name || "未知賽事",
         date: item.concert_date || "未知日期",
@@ -150,17 +165,22 @@ function formatLineMessage(ticketList) {
   return content
 }
 
-// // 執行
-// checkTicketsAndNotify()
-
 // ==================== 啟動 ====================
-// 手動執行一次：node your_script.js
-// 或使用 cron 定時執行
-// cron.schedule(CONFIG.CHECK_INTERVAL, () => {
-checkTicketsAndNotify()
-// })
 
-// 如果不要定時執行，可直接寫 checkTicketsAndNotify()
+// Check if running in GitHub Actions or CI environment
+if (process.env.GITHUB_ACTIONS || process.env.CI) {
+  console.log("Running in CI/One-off mode...")
+  checkTicketsAndNotify()
+} else {
+  // Running locally or on a VPS
+  console.log("門票監控腳本已啟動，檢查間隔:", CONFIG.CHECK_INTERVAL)
 
-console.log("門票監控腳本已啟動，檢查間隔:", CONFIG.CHECK_INTERVAL)
-// 啟動後會持續運行，按 Ctrl+C 停止
+  // Run immediately on start
+  checkTicketsAndNotify()
+
+  // Schedule periodic checks
+  cron.schedule(CONFIG.CHECK_INTERVAL, () => {
+    checkTicketsAndNotify()
+  })
+}
+

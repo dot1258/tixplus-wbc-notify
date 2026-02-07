@@ -1,0 +1,27 @@
+{
+  "name": "tixplus-wbc-notify",
+  "version": "1.0.0",
+  "description": "可依自己習慣及使用環境佈署",
+  "main": "tixplus-wbc-notify.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yhl/tixplus-wbc-notify.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/yhl/tixplus-wbc-notify/issues"
+  },
+  "homepage": "https://github.com/yhl/tixplus-wbc-notify#readme",
+  "dependencies": {
+    "axios": "^1.13.4",
+    "cheerio": "^1.2.0",
+    "dotenv": "^17.2.4",
+    "node-cron": "^4.2.1"
+  }
+}

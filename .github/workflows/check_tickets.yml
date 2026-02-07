@@ -1,0 +1,28 @@
+name: Check Tickets
+
+on:
+  schedule:
+    - cron: '*/5 * * * *' # Adds job to queue every 5 minutes
+  workflow_dispatch: # Allows manual trigger from Actions tab
+
+jobs:
+  check-tickets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run script
+        env:
+          CHANNEL_ACCESS_TOKEN: ${{ secrets.CHANNEL_ACCESS_TOKEN }}
+          USER_ID: ${{ secrets.USER_ID }}
+        run: node tixplus-wbc-notify.js
