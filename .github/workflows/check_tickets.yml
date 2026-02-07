@@ -2,7 +2,7 @@ name: Check Tickets
 
 on:
   schedule:
-    - cron: '*/5 * * * *' # Adds job to queue every 5 minutes
+    - cron: '*/1 * * * *' # Adds job to queue every minute (Note: GitHub may delay this on free tier)
   workflow_dispatch: # Allows manual trigger from Actions tab
 
 jobs:
